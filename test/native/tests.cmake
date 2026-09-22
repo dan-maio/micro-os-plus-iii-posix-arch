@@ -23,7 +23,7 @@ set (BOARD_TEST_NEED_DEVICES smp-num-test smp-pipeline-test)
 # at OS_NCPU=1 off the RP2350's SMP core -- and this is what proves that branch
 # is built and run rather than merely written.
 function (board_test_ncpu _app _out)
-  if (_app STREQUAL "mutex-stress")
+  if (_app STREQUAL "mutex-stress" OR _app STREQUAL "rtos-apis")
     set (${_out} 1 PARENT_SCOPE)
   else ()
     set (${_out} "${UOS_BOARD_NCPU}" PARENT_SCOPE)
@@ -34,4 +34,39 @@ endfunction ()
 # support is the SMP boot helper: test-smp-boot.cpp installs a per-core idle
 # thread through scheduler::os_idle_thread_core[], which exists only under the
 # SMP scheduler.
-set (BOARD_TEST_SELF_CONTAINED mutex-stress)
+set (BOARD_TEST_SELF_CONTAINED mutex-stress rtos-apis)
+
+# Captured HERE, not inside the function: CMAKE_CURRENT_LIST_DIR is evaluated
+# where a function RUNS, which is test/CMakeLists.txt, not where it is written.
+set (_native_tests_dir "${CMAKE_CURRENT_LIST_DIR}")
+
+# rtos-apis carries a C source, and the loop globs only *.cpp.
+# rtos-apis wants its own os-app-config.h -- the statistics and
+# instrumentation switches its sub-tests read are in it.
+function (board_test_defines _app _out)
+  if (_app STREQUAL "rtos-apis")
+    set (${_out} OS_USE_OS_APP_CONFIG_H PARENT_SCOPE)
+  else ()
+    set (${_out} "" PARENT_SCOPE)
+  endif ()
+endfunction ()
+
+# rtos-apis links the kernel's opt-in POSIX I/O target. Its c-syscalls-posix.cpp
+# defines __posix_open/__posix_read/… -- prefixed, so on a host they do not
+# collide with glibc's own open/read/write, which the board's console, the
+# trace backend and the host-file SD back-end all call.
+function (board_test_libraries _app _out)
+  if (_app STREQUAL "rtos-apis")
+    set (${_out} micro-os-plus::iii-posix-io PARENT_SCOPE)
+  else ()
+    set (${_out} "" PARENT_SCOPE)
+  endif ()
+endfunction ()
+
+function (board_test_sources _app _out)
+  if (_app STREQUAL "rtos-apis")
+    set (${_out} "${_native_tests_dir}/rtos-apis/test-c-api.c" PARENT_SCOPE)
+  else ()
+    set (${_out} "" PARENT_SCOPE)
+  endif ()
+endfunction ()

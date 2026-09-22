@@ -118,6 +118,55 @@ endforeach ()
 file (GLOB _board_sources CONFIGURE_DEPENDS "${UOS_BOARD_SRC_DIR}/src/*.cpp")
 
 # -----------------------------------------------------------------------------
+# Sanitizers.
+#
+# The one thing a synthetic host ought to be better at than silicon, and the
+# reason this option exists at all: the same kernel sources, run under a
+# checker that no Cortex-A53 can offer.
+#
+#     cmake -S . -B build -DBOARD=native -DUOS_SANITIZE=address
+#     cmake -S . -B build -DBOARD=native -DUOS_SANITIZE=undefined
+#     cmake -S . -B build -DBOARD=native -DUOS_SANITIZE=address,undefined
+#
+# What each one is worth here is measured in docs/posix-arch-port.md §21.  The
+# short version, from running the whole native suite under each:
+#
+#   address    11/11 pass, no reports.  Usable as a gate.  It found a real
+#              bug on its first run (a dangling thread name in
+#              smp-pro-cons-test) that had shipped in every copy of that
+#              test.  The port is annotated for it with the ASan fiber API,
+#              without which every context switch is a false positive.
+#   undefined  11/11 pass, 29 reports, all of them -fsanitize=vptr on the
+#              kernel's intrusive-list sentinel downcasts (os-lists.cpp,
+#              os-core.cpp), which are deliberate and already carry
+#              -W pragmas upstream.  UOS_SANITIZE_NO_VPTR=ON drops them and
+#              leaves the suite clean; everything else UBSan checks is clean
+#              as it stands.
+#   thread     builds, runs, and the test still reaches RESULT: PASS, but it
+#              produces ~6000 warnings and a 350k-line log: TSan has no idea
+#              a µOS++ thread migrates between host threads.  It has a fiber
+#              API (__tsan_create_fiber / __tsan_switch_to_fiber) that would
+#              fix that, and the port does not use it yet.  Not a gate.
+#
+# Debug or RelWithDebInfo is wanted with any of them, for the line numbers.
+set (UOS_SANITIZE "" CACHE STRING
+     "Sanitizers to build with: address, undefined, address,undefined, thread")
+option (UOS_SANITIZE_NO_VPTR
+        "With UOS_SANITIZE=undefined, drop the vptr check (see above)" OFF)
+
+set (_uos_sanitize_opts "")
+if (UOS_SANITIZE)
+  set (_uos_sanitize_opts
+       "-fsanitize=${UOS_SANITIZE}"
+       -fno-omit-frame-pointer)
+  # This has to come after -fsanitize=, the last flag on the line wins.
+  if (UOS_SANITIZE_NO_VPTR)
+    list (APPEND _uos_sanitize_opts -fno-sanitize=vptr)
+  endif ()
+  message (STATUS "µOS++ III POSIX port: -fsanitize=${UOS_SANITIZE}")
+endif ()
+
+# -----------------------------------------------------------------------------
 # The port itself.
 add_library (micro-os-plus-iii-posix-arch-interface INTERFACE)
 
@@ -160,7 +209,12 @@ target_compile_definitions (
 )
 
 target_compile_options (
-  micro-os-plus-iii-posix-arch-interface INTERFACE ${UOS_BOARD_FLAGS}
+  micro-os-plus-iii-posix-arch-interface
+  INTERFACE ${UOS_BOARD_FLAGS} ${_uos_sanitize_opts}
+)
+
+target_link_options (
+  micro-os-plus-iii-posix-arch-interface INTERFACE ${_uos_sanitize_opts}
 )
 
 target_link_libraries (

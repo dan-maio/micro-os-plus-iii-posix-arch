@@ -364,6 +364,16 @@ namespace os
 
           os_impl_ucontext_t* old_uc = &old_thread->context_.port_.ucontext;
 
+          /* Tell AddressSanitizer the stack is about to move, and where to.
+           * `asan_save` lives on the OUTGOING thread's stack, so it is still
+           * there -- and still this thread's -- whenever and on whichever CPU
+           * that thread is resumed. Compiles to nothing without -fsanitize=
+           * address; see host_cpu.hpp. */
+          void* asan_save = nullptr;
+          host_cpu::asan_start_switch (&asan_save,
+                                       new_thread->stack ().bottom (),
+                                       new_thread->stack ().size ());
+
           if (os_impl_swapcontext (old_uc, new_uc) != 0)
             {
               trace::printf ("port::scheduler::%s() swapcontext failed: %s\n",
@@ -374,6 +384,7 @@ namespace os
           // Resumed -- and NOT necessarily on the CPU that left. Everything
           // below must re-read the CPU index; nothing captured above is
           // valid any more.
+          host_cpu::asan_finish_switch (asan_save);
           host_cpu::publish_pending ();
 
           // Unmask last, and only now: everything above this line is the

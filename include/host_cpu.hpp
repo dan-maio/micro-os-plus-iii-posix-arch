@@ -16,6 +16,8 @@
 #ifndef MICRO_OS_PLUS_III_POSIX_ARCH_HOST_CPU_HPP_
 #define MICRO_OS_PLUS_III_POSIX_ARCH_HOST_CPU_HPP_
 
+#include <cstddef>
+
 #include <cmsis-plus/rtos/os.h>
 #include <cmsis-plus/rtos/port/os-decls.h>
 
@@ -91,6 +93,36 @@ namespace host_cpu
    * arrival into a context: after swapcontext(), and in the trampoline. */
   void
   publish_pending (void);
+
+  /* --------------------------------------------------------------------
+   * AddressSanitizer and the context switch.
+   *
+   * ASan keeps a shadow record of which stack is live so that it can tell a
+   * genuine overflow from an ordinary function return. swapcontext() moves
+   * the stack pointer to somewhere ASan has never seen, and without being
+   * told, ASan reports the first thing the resumed thread touches as a
+   * stack-buffer-overflow -- a false positive on every single switch, which
+   * makes the tool useless rather than merely noisy.
+   *
+   * The fix is ASan's own fiber interface, which exists for exactly this:
+   *
+   *   start_switch (&save, bottom, size)   before swapcontext / setcontext
+   *   finish_switch (save)                 first thing on arrival
+   *
+   * `save` is where ASan parks the outgoing fibre's "fake stack" (its
+   * use-after-return bookkeeping). It must survive until that context is
+   * resumed, so switch_stacks() keeps it in a local -- which lives on the
+   * outgoing thread's own stack and is therefore still there, and still
+   * correct, whenever and on whichever CPU that thread comes back.
+   *
+   * Both compile to nothing when ASan is off, so the calls stay unguarded at
+   * the call sites and the switch code reads the same either way.
+   * -------------------------------------------------------------------- */
+  void
+  asan_start_switch (void** save, const void* bottom, std::size_t size);
+
+  void
+  asan_finish_switch (void* save);
 
 } /* namespace host_cpu */
 

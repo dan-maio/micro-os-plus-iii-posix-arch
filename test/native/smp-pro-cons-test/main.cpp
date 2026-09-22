@@ -476,11 +476,21 @@ os_main (int, char*[])
   static thread* s_prods[4];
   static thread* s_conss[4];
 
+  // The names must outlive the threads: os::rtos::named_object stores the
+  // 'const char* const name_' it is given, it does not copy the characters.
+  // These were loop-local 'char name[16]' buffers; every thread name then
+  // dangled the moment the loop iteration ended, and
+  // scheduler::is_thread_allowed_on_cpu() strcmp()s thread::name() on every
+  // scheduling decision.  ASan (-DUOS_SANITIZE=address) reports it as
+  // stack-use-after-scope in is_thread_allowed_on_cpu.
+  static char s_prod_names[4][16];
+  static char s_cons_names[4][16];
+
   // Create Producers (pinned to cores 0..3)
   for (unsigned i = 0; i < 4; ++i)
     {
-      char name[16];
-      snprintf (name, sizeof (name), "prod_%u", i);
+      char* name = s_prod_names[i];
+      snprintf (name, sizeof (s_prod_names[i]), "prod_%u", i);
       thread::attributes attr = thread::initializer;
       attr.th_stack_address = s_prod_stacks[i];
       attr.th_stack_size_bytes = sizeof (s_prod_stacks[i]);
@@ -495,8 +505,8 @@ os_main (int, char*[])
   // Create Consumers (pinned to cores 0..3)
   for (unsigned i = 0; i < 4; ++i)
     {
-      char name[16];
-      snprintf (name, sizeof (name), "cons_%u", i);
+      char* name = s_cons_names[i];
+      snprintf (name, sizeof (s_cons_names[i]), "cons_%u", i);
       thread::attributes attr = thread::initializer;
       attr.th_stack_address = s_cons_stacks[i];
       attr.th_stack_size_bytes = sizeof (s_cons_stacks[i]);

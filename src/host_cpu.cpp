@@ -243,6 +243,12 @@ namespace
   [[noreturn]] void
   trampoline (void* func, void* args)
   {
+    // Arrival. The switch that brought us here started on another stack; this
+    // tells ASan the move is complete and that THIS stack is the live one.
+    // nullptr because a context that has never run has no outgoing fibre
+    // bookkeeping of its own to restore.
+    host_cpu::asan_finish_switch (nullptr);
+
     // A context that has never run still arrives on a CPU that has just left
     // another thread behind, so the publish is owed here too -- and it is
     // owed BEFORE this thread can be interrupted, or the tick's own switch
@@ -379,6 +385,44 @@ namespace host_cpu
   {
     g_publish[cpu].addr = addr;
     g_publish[cpu].val = val;
+  }
+
+  /* See the long comment in host_cpu.hpp. Declared by hand rather than through
+   * <sanitizer/asan_interface.h>, so that a toolchain without the header still
+   * builds the port -- the symbols come from the ASan runtime, which is only
+   * linked when -fsanitize=address is on, and the calls are compiled out
+   * otherwise. */
+#if defined(__SANITIZE_ADDRESS__) \
+    || (defined(__has_feature) && __has_feature (address_sanitizer))
+#define UOS_HAVE_ASAN 1
+extern "C" void
+__sanitizer_start_switch_fiber (void** fake_stack_save, const void* bottom,
+                                std::size_t size);
+extern "C" void
+__sanitizer_finish_switch_fiber (void* fake_stack_save, const void** bottom_old,
+                                 std::size_t* size_old);
+#endif
+
+  void
+  asan_start_switch (void** save, const void* bottom, std::size_t size)
+  {
+#if defined(UOS_HAVE_ASAN)
+    __sanitizer_start_switch_fiber (save, bottom, size);
+#else
+    (void)save;
+    (void)bottom;
+    (void)size;
+#endif
+  }
+
+  void
+  asan_finish_switch (void* save)
+  {
+#if defined(UOS_HAVE_ASAN)
+    __sanitizer_finish_switch_fiber (save, nullptr, nullptr);
+#else
+    (void)save;
+#endif
   }
 
   void

@@ -61,6 +61,21 @@ endfunction ()
 function (board_test_ncpu _app _out)
   set (${_out} "${UOS_BOARD_NCPU}" PARENT_SCOPE)
 endfunction ()
+# A SEVENTH hook, which the other three projects do not have yet.
+#
+# The six above are shared, deliberately, so a test may be carried between
+# ports without its build rules changing meaning. This one is here because
+# this port needed it first: rtos-apis is upstream's API suite and links
+# micro-os-plus::iii-posix-io, which is an opt-in target of the kernel rather
+# than a device driver -- so UOS_BOARD_DEVICES, which names a board's driver
+# set, is the wrong place to ask for it.
+#
+# It defaults to nothing, so adding it to the other three ports would change
+# no generated build. That is a separate change and it needs their
+# regressions, so it has not been made.
+function (board_test_libraries _app _out)
+  set (${_out} "" PARENT_SCOPE)
+endfunction ()
 if (EXISTS "${_test_dir}/tests.cmake")
   include ("${_test_dir}/tests.cmake")
 endif ()
@@ -91,6 +106,7 @@ foreach (_dir IN LISTS _test_dirs)
   board_test_includes ("${_app}" _app_includes)
   board_test_options  ("${_app}" _app_options)
   board_test_ncpu     ("${_app}" _app_ncpu)
+  board_test_libraries ("${_app}" _app_libs)
 
   set (_app_support ${_test_support})
   if ("${_app}" IN_LIST BOARD_TEST_SELF_CONTAINED)
@@ -114,6 +130,9 @@ foreach (_dir IN LISTS _test_dirs)
   endif ()
   if ("${_app}" IN_LIST BOARD_TEST_NEED_DEVICES)
     list (APPEND _libs ${UOS_BOARD_DEVICES})
+  endif ()
+  if (_app_libs)
+    list (APPEND _libs ${_app_libs})
   endif ()
 
   foreach (_variant IN LISTS _variants)
