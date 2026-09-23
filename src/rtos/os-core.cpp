@@ -86,6 +86,9 @@ namespace os
 
         extern "C" volatile bool _in_isr[OS_NCPU];
         volatile bool _in_isr[OS_NCPU] = {};
+
+        extern "C" volatile uint32_t signal_nesting;
+        volatile uint32_t signal_nesting = 0;
       } /* namespace interrupts */
 
       namespace scheduler

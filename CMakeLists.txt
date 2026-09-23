@@ -38,6 +38,14 @@ set (UOS_DEVICES_DIR "${_uos_siblings}/micro-os-plus-iii-devices"
      CACHE PATH "µOS++ III devices working copy")
 
 foreach (_dep_var IN ITEMS UOS_SMP_DIR UOS_DEVICES_DIR)
+  # A workspace may keep the siblings as `*.git` working copies (the xPack
+  # development convention); fall back to that name before giving up.
+  if (NOT EXISTS "${${_dep_var}}/CMakeLists.txt"
+      AND EXISTS "${${_dep_var}}.git/CMakeLists.txt")
+    set (${_dep_var} "${${_dep_var}}.git" CACHE PATH
+         "µOS++ III sibling working copy" FORCE)
+  endif ()
+
   if (NOT EXISTS "${${_dep_var}}/CMakeLists.txt")
     string (REPLACE "UOS_" "" _repo "${_dep_var}")
     string (REPLACE "_DIR" "" _repo "${_repo}")

@@ -123,6 +123,12 @@ namespace os
         /* Per-CPU handler-mode flag. AArch64 has the same array for the same
          * reason: there are no banked modes to ask. */
         extern "C" volatile bool _in_isr[OS_NCPU];
+
+        /* The Arm CMSIS RTOS validator's host shim raises its "interrupt" with
+         * kill(SIGUSR1) and increments this around the handler. The port has
+         * no banked mode to ask either, so a non-zero value also means handler
+         * mode (see in_handler_mode()). Defined in src/rtos/os-core.cpp. */
+        extern "C" volatile uint32_t signal_nesting;
       } /* namespace interrupts */
 
       namespace scheduler

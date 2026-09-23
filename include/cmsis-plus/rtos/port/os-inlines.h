@@ -158,7 +158,7 @@ namespace os
         in_handler_mode (void)
         {
           const unsigned cpu = scheduler::port_cpu_id_inline ();
-          return (cpu < OS_NCPU) && _in_isr[cpu];
+          return ((cpu < OS_NCPU) && _in_isr[cpu]) || (signal_nesting != 0);
         }
 
         inline bool __attribute__ ((always_inline))
