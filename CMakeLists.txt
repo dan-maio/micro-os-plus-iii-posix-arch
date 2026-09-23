@@ -145,8 +145,12 @@ file (GLOB _board_sources CONFIGURE_DEPENDS "${UOS_BOARD_SRC_DIR}/src/*.cpp")
 #   thread     builds, runs, and the test still reaches RESULT: PASS, but it
 #              produces ~6000 warnings and a 350k-line log: TSan has no idea
 #              a µOS++ thread migrates between host threads.  It has a fiber
-#              API (__tsan_create_fiber / __tsan_switch_to_fiber) that would
-#              fix that, and the port does not use it yet.  Not a gate.
+#              API (__tsan_create_fiber / __tsan_switch_to_fiber) that looks
+#              like the fix, and is not: that model is N:1, many fibers on ONE
+#              host thread, and this port is M:N.  The annotation was written
+#              and it crashes.  tools/tsan-fiber-probe.c reproduces it in
+#              forty lines with no µOS++ in them.  Not a gate, and not
+#              something waiting to be done here -- see docs Section 21.4.
 #
 # Debug or RelWithDebInfo is wanted with any of them, for the line numbers.
 set (UOS_SANITIZE "" CACHE STRING
