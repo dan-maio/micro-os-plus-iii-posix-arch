@@ -113,12 +113,46 @@ namespace
     scheduler::switch_stacks (nullptr);
   }
 
+  /* Put `errno` back, out of line.
+   *
+   * Out of line on purpose. `errno` is `*__errno_location()`, which is native
+   * TLS, and the caller read it BEFORE a swapcontext() that may have resumed
+   * this thread on a different CPU -- that is, on a different host thread,
+   * with a different errno. A compiler that cached the address across the
+   * switch would write the value into the host thread the thread LEFT. This
+   * port bans native TLS across a switch point for exactly that reason, and a
+   * noinline call is how the ban is honoured here: the address is resolved
+   * inside this function, after the switch, on whichever CPU is running now.
+   */
+  [[gnu::noinline]] void
+  restore_errno (int value)
+  {
+    errno = value;
+  }
+
   void
   tick_handler (int, siginfo_t*, void*)
   {
+    /* errno belongs to the THREAD, and on this port the thread is the uOS++
+     * one, not the host thread it is borrowing.
+     *
+     * This handler does not, in general, return to where it was raised: its
+     * epilogue switches contexts, so control leaves on one thread's stack and
+     * comes back -- possibly on another CPU, possibly much later -- when THIS
+     * thread is resumed. Everything the handler and every thread scheduled in
+     * between did to errno is therefore visible to the interrupted code
+     * unless it is put back. On silicon there is no errno to spoil; here
+     * there is.
+     *
+     * `saved` is a local, so like the ASan fibre save it rides the
+     * interrupted thread's own stack and is still correct wherever that
+     * thread comes back. */
+    const int saved = errno;
+
     const unsigned cpu = port_cpu_id ();
     if (cpu >= OS_NCPU)
       {
+        restore_errno (saved);
         return;
       }
 
@@ -137,14 +171,21 @@ namespace
     interrupts::_in_isr[cpu] = false;
 
     irq_epilogue (cpu);
+
+    // Resumed. See the comment at the top of this function.
+    restore_errno (saved);
   }
 
   void
   ipi_handler (int, siginfo_t*, void*)
   {
+    // Same reasoning as tick_handler(); this one switches contexts too.
+    const int saved = errno;
+
     const unsigned cpu = port_cpu_id ();
     if (cpu >= OS_NCPU)
       {
+        restore_errno (saved);
         return;
       }
 
@@ -153,6 +194,8 @@ namespace
     interrupts::_in_isr[cpu] = false;
 
     irq_epilogue (cpu);
+
+    restore_errno (saved);
   }
 
   /* One per CPU, never shared: a CPU reporting a fault is not going anywhere
