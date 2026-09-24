@@ -1,6 +1,6 @@
 /*
  * smp-mat-test (Raspberry Pi Zero 2W / BCM2837, 4× Cortex-A53) — parallel
- * block linear equation solver, N = 120, B = 20, OS_NCPU cores. Adapted from the
+ * block linear equation solver, N = 500, B = 50, OS_NCPU cores. Adapted from the
  * pico2 smp-mat-test (itself the pico2 port of the A7 smp_test4). EVERYTHING
  * RUNS IN RAM (the whole kernel image, all matrices, all stacks live in DRAM;
  * there is no flash/XIP on this platform).
@@ -26,9 +26,9 @@
  *     (smp_install_boot_threads + smp::start_secondary_cores);
  *   - UART0 (PL011) + a GPIO LED via this port's uart.hpp / led.hpp.
  *
- * With B = 20, N/B = 6 blocks over OS_NCPU cores: the block count need NOT be a
+ * With B = 50, N/B = 10 blocks over OS_NCPU cores: the block count need NOT be a
  * multiple of the core count — the round-robin row-block assignment simply
- * distributes 6 blocks unevenly across the cores.
+ * distributes 10 blocks unevenly across the cores.
  *
  * Output on UART0 @115200; the LED blinks while the solver runs and becomes a
  * heartbeat after the summary.
@@ -189,8 +189,8 @@ namespace
 // ----------------------------------------------------------------------------
 // Solver dimensions
 // ----------------------------------------------------------------------------
-#define N 120
-#define B 20
+#define N 500
+#define B 50
 
 // ----------------------------------------------------------------------------
 // Generation-based spin barrier. On the Cortex-A53 the global exclusive monitor
@@ -839,7 +839,7 @@ os_main (int /*argc*/, char* /*argv*/[])
   int num_blocks = N / B;
   // NOTE: num_blocks need NOT be a multiple of OS_NCPU — the round-robin row
   // assignment ((i-(k+1)) % OS_NCPU == core_id) simply distributes the blocks
-  // unevenly. With N=120, B=20 -> 6 blocks over OS_NCPU cores.
+  // unevenly. With N=500, B=50 -> 10 blocks over OS_NCPU cores.
   if (num_blocks % OS_NCPU != 0)
     {
       write_fmt ("NOTE: %d blocks over %d cores (uneven round-robin split).\n",
