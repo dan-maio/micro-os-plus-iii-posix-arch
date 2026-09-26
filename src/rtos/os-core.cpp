@@ -178,11 +178,15 @@ namespace os
         {
           os_assert_throw (!interrupts::in_handler_mode (), EPERM);
 
-          const unsigned cpu = port_cpu_id ();
-
           if (state == state::locked)
             {
+              // Block the tick BEFORE reading the CPU id. The tick handler
+              // swapcontext()s, and the thread can resume on another host
+              // thread: read before the block, the id could name the CPU it
+              // left, and lock_state[] and the kernel lock would be taken for
+              // that CPU, never to be released by the matching unlock.
               ::pthread_sigmask (SIG_BLOCK, &interrupts::irq_set, nullptr);
+              const unsigned cpu = port_cpu_id ();
               state_t tmp = lock_state[cpu];
               if (tmp != state::locked)
                 {
@@ -198,6 +202,9 @@ namespace os
             }
           else
             {
+              // Holding the lock, the tick is blocked and the thread cannot
+              // move; not holding it, both CPUs read "unlocked" anyway.
+              const unsigned cpu = port_cpu_id ();
               state_t tmp = lock_state[cpu];
               if (tmp != state::unlocked)
                 {
