@@ -47,6 +47,7 @@
 #include <flatfs.hpp>
 #endif
 
+#include <atomic>
 #include <cmath>
 #include <cstdarg>
 #include <cstdint>
@@ -110,15 +111,15 @@ static mutex g_file_mtx { "file" };
 static semaphore_counting g_beat { "beat", 3, 0 };
 
 // Progress / result flags.
-static volatile unsigned g_text_written = 0;
-static volatile unsigned g_calc_written = 0;
-static volatile unsigned g_text_fail = 0;
-static volatile unsigned g_calc_fail = 0;
-static volatile unsigned g_read_fail = 0;
-static volatile unsigned g_led_fail = 0;
+static std::atomic<unsigned> g_text_written{0};
+static std::atomic<unsigned> g_calc_written{0};
+static std::atomic<unsigned> g_text_fail{0};
+static std::atomic<unsigned> g_calc_fail{0};
+static std::atomic<unsigned> g_read_fail{0};
+static std::atomic<unsigned> g_led_fail{0};
 
 // Set by os_main just before RESULT so the infinite uart thread can exit.
-static volatile bool g_finish = false;
+static std::atomic<bool> g_finish{false};
 
 // In-memory copy of num.txt: flatfs cannot append, so the whole file is
 // rewritten on every line. num.txt grows over the RUN_MS window (writers run
@@ -131,7 +132,7 @@ static unsigned g_num_len = 0;
 static char g_read_buf[256 * 1024];
 
 // Per-core count of appended lines (the "[cN]" of each write), for a summary.
-static volatile unsigned g_core_lines[OS_NCPU] = {};
+static std::atomic<unsigned> g_core_lines[OS_NCPU]{};
 
 // ---------------------------------------------------------------------------
 // SD helpers. All called with g_file_mtx held.

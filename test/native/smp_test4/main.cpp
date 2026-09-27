@@ -7,6 +7,7 @@
  * core histogram once a second and blinks the LED. If work lands on more than
  * one core (and across all of them over time), the load balancer is working.
  */
+#include <atomic>
 #include <cmsis-plus/rtos/os.h>
 #include <cmsis-plus/diag/trace.h>
 #include <uart.hpp>
@@ -26,7 +27,7 @@ static constexpr unsigned NWORK = 8;
 // Serialises console output: the reporter thread and the os_main RESULT line
 // both write to the (non-reentrant) UART from different cores.
 static mutex g_con { "con" };
-static volatile std::uint32_t hist[NWORK][OS_NCPU] = {};
+static std::atomic<std::uint32_t> hist[NWORK][OS_NCPU]{};
 
 static void* worker (void* arg)
 {
@@ -37,7 +38,7 @@ static void* worker (void* arg)
     if (c < OS_NCPU) hist[id][c]++;
     // burn a little CPU so the scheduler has something to migrate
     volatile std::uint32_t x = 0;
-    for (std::uint32_t i = 0; i < 200000; ++i) x += i;
+    for (std::uint32_t i = 0; i < 200000; ++i) x = x + i;
     (void)x;
     this_thread::yield();
   }

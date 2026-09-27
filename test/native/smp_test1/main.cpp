@@ -7,6 +7,7 @@
  * the core each participant is running on — proving cross-core semaphore
  * signalling and the periodic system tick. Adapted from the a7 smp_test1.
  */
+#include <atomic>
 #include <cmsis-plus/rtos/os.h>
 #include <cmsis-plus/diag/trace.h>
 #include <uart.hpp>
@@ -24,8 +25,8 @@ using namespace os::rtos;
 
 static semaphore_binary g_ping { "ping", 1 };   // starts signalled
 static semaphore_binary g_pong { "pong", 0 };
-static volatile std::uint32_t g_rounds = 0;
-static volatile int g_ping_core = -1, g_pong_core = -1;
+static std::atomic<std::uint32_t> g_rounds{0};
+static std::atomic<int> g_ping_core{-1}, g_pong_core{-1};
 
 static void* pinger (void*)
 {

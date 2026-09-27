@@ -7,6 +7,7 @@
  * prints throughput once a second. Proves cross-core message_queue transfer
  * and blocking send/receive. Adapted from the a7 smp_test3/2.
  */
+#include <atomic>
 #include <cmsis-plus/rtos/os.h>
 #include <cmsis-plus/diag/trace.h>
 #include <uart.hpp>
@@ -24,8 +25,8 @@ using namespace os::rtos;
 
 static message_queue g_mq { "mq", 8, sizeof(void*) };  /* AArch64: slot >= sizeof(void*) */
 static mutex g_print { "print" };   // serialize UART across cores
-static volatile std::uint32_t g_produced = 0, g_consumed = 0, g_primes = 0;
-static volatile unsigned g_beats = 0;
+static std::atomic<std::uint32_t> g_produced{0}, g_consumed{0}, g_primes{0};
+static std::atomic<unsigned> g_beats{0};
 
 static bool is_prime(std::uint32_t n)
 {

@@ -8,6 +8,7 @@
  * mapping are coherent across cores (no lost updates). Each line is tagged
  * with the core it actually ran on (port_cpu_id).
  */
+#include <atomic>
 #include <cmsis-plus/rtos/os.h>
 #include <cmsis-plus/diag/trace.h>
 #include <uart.hpp>
@@ -28,7 +29,7 @@ static volatile std::uint32_t g_prog[OS_NCPU] = {};
 
 static mutex       g_mutex { "cnt" };
 static volatile std::uint32_t g_counter = 0;
-static volatile std::uint32_t g_done = 0;
+static std::atomic<std::uint32_t> g_done{0};
 
 static void* worker (void*)
 {
