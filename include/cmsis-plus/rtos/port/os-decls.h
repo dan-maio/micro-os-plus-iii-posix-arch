@@ -13,9 +13,9 @@
  * are integers and whose thread context is a bare stack pointer. Neither is
  * true here -- the interrupt state is a signal-mask bit, the scheduler state
  * is a bool, and the context carries a ucontext. The SMP declarations the
- * kernel actually reads (lock_state[], _smp_klock, _smp_tlock,
- * _port_ctx_pending[]) are reproduced below with the same names, the same
- * types and the same volatility, so the kernel cannot tell the two apart.
+ * kernel actually reads (lock_state[], _smp_klock, _port_ctx_pending[]) are
+ * reproduced below with the same names, the same types and the same
+ * volatility, so the kernel cannot tell the two apart.
  */
 
 #ifndef CMSIS_PLUS_RTOS_PORT_OS_DECLS_H_
@@ -144,8 +144,11 @@ namespace os
 
         extern volatile state_t lock_state[OS_NCPU];
 
-        /* Byte-for-byte the ARM ports' structures: the recursive kernel lock
-         * (lock word, owner CPU, nesting depth) and the timer leaf lock. */
+        /* Byte-for-byte the ARM ports' recursive kernel lock (lock word,
+         * owner CPU, nesting depth). The ARM timer leaf lock (smp_tlock_t,
+         * port_tmr_lock/unlock) is deliberately NOT carried here: it exists
+         * for a kernel timer back-end that takes it, and this port's timers
+         * are POSIX timers driven through host_cpu, so it would be dead. */
         struct smp_klock_t
         {
           volatile uint32_t lock;
@@ -153,13 +156,7 @@ namespace os
           volatile uint32_t depth;
         };
 
-        struct smp_tlock_t
-        {
-          volatile uint32_t lock;
-        };
-
         extern smp_klock_t _smp_klock;
-        extern smp_tlock_t _smp_tlock;
         extern volatile unsigned _port_ctx_pending[OS_NCPU];
       } /* namespace scheduler */
 

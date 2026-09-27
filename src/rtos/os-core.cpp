@@ -96,7 +96,6 @@ namespace os
         volatile state_t lock_state[OS_NCPU] = {};
 
         smp_klock_t _smp_klock = { 0, SMP_NO_OWNER, 0 };
-        smp_tlock_t _smp_tlock = { 0 };
         volatile unsigned _port_ctx_pending[OS_NCPU] = {};
 
         // --------------------------------------------------------------------

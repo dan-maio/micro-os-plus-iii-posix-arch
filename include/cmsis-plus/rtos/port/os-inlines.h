@@ -121,27 +121,6 @@ namespace os
           __atomic_store_n (&_smp_klock.lock, 0u, __ATOMIC_RELEASE);
         }
 
-        /* SMP: acquire the timer leaf lock. */
-        inline void __attribute__ ((always_inline))
-        port_tmr_lock (void)
-        {
-          while (__atomic_exchange_n (&_smp_tlock.lock, 1u, __ATOMIC_ACQUIRE)
-                 != 0u)
-            {
-#if defined(__x86_64__) || defined(__i386__)
-              __builtin_ia32_pause ();
-#elif defined(__aarch64__) || defined(__arm__)
-              __asm__ volatile("yield" ::: "memory");
-#endif
-            }
-        }
-
-        inline void __attribute__ ((always_inline))
-        port_tmr_unlock (void)
-        {
-          __atomic_store_n (&_smp_tlock.lock, 0u, __ATOMIC_RELEASE);
-        }
-
         inline unsigned __attribute__ ((always_inline))
         port_smp_depth (void)
         {

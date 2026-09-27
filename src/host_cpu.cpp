@@ -158,6 +158,7 @@ namespace
 
     interrupts::_in_isr[cpu] = true;
 
+#if defined(__linux__)
     // Only CPU 0 advances the kernel clock. Every CPU tickles itself into
     // re-picking. This is the BCM2837 arrangement exactly: four cores take
     // the 1 ms PPI, one calls os_systick_handler().
@@ -165,6 +166,13 @@ namespace
       {
         os_systick_handler ();
       }
+#else
+    // On non-Linux where per-thread timers are not available (SIGEV_SIGNAL
+    // process-directed delivery), guarantee os_systick_handler() is called
+    // regardless of which host thread received the tick signal so the clock
+    // does not stall.
+    os_systick_handler ();
+#endif
 
     scheduler::_port_ctx_pending[cpu] = 1;
 
@@ -220,6 +228,12 @@ namespace
     sev.sigev_notify = SIGEV_THREAD_ID;
     sev._sigev_un._tid = static_cast<int> (::syscall (SYS_gettid));
 #else
+    // On non-Linux (e.g. Darwin/BSD), per-thread timer creation is not available.
+    // Arm the process timer only on CPU 0 to prevent N timers firing concurrently.
+    if (port_cpu_id () != 0)
+      {
+        return;
+      }
     sev.sigev_notify = SIGEV_SIGNAL;
 #endif
     sev.sigev_signo = clock::signal_number ();
