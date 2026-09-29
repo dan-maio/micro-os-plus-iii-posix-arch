@@ -608,9 +608,11 @@ namespace os
 
 // ----------------------------------------------------------------------------
 
-extern "C" unsigned
+// Never inlined, and never merged or hoisted: see _this_cpu in os-inlines.h.
+extern "C" __attribute__ ((noinline)) unsigned
 port_cpu_id (void)
 {
+  __asm__ volatile("" ::: "memory");
   return os::rtos::port::_this_cpu;
 }
 

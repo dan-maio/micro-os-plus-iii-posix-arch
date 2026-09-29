@@ -46,6 +46,10 @@
 #pragma clang diagnostic ignored "-Wc++98-compat"
 #endif
 
+// Out of line on purpose; see _this_cpu below.
+extern "C" unsigned
+port_cpu_id (void);
+
 namespace os
 {
   namespace rtos
@@ -65,6 +69,21 @@ namespace os
        * whichever host thread happens to be running it at that instant. No
        * port or application state may live there across a switch point --
        * read errno only inside the critical section that made the call.
+       *
+       * That rule covers the ADDRESS of `_this_cpu` too, and the compiler does
+       * not know it. The thread pointer is constant for the life of a host
+       * thread, so clang computes `&_this_cpu` once per function and keeps it
+       * in a callee-saved register. A function that blocks -- semaphore::
+       * wait() loops around reschedule() -- then resumes on another host
+       * thread and reads the CPU id of the one it left. It takes the kernel
+       * lock as that CPU, skips the acquire when that CPU already owns it,
+       * and two CPUs run inside the lock; the depth count strands it held and
+       * every CPU spins for ever (clang 16/17 -O2: smp_test3, smp-pipeline).
+       * GCC reloads the thread pointer at each access and never showed it.
+       *
+       * So the read is never inlined: each call of port_cpu_id() computes the
+       * address afresh, and the empty asm makes every call a side effect that
+       * can be neither merged with another nor hoisted, LTO included.
        */
       extern thread_local unsigned _this_cpu;
 
@@ -73,7 +92,7 @@ namespace os
         inline unsigned __attribute__ ((always_inline))
         port_cpu_id_inline (void)
         {
-          return _this_cpu;
+          return ::port_cpu_id ();
         }
 
         inline port::scheduler::state_t __attribute__ ((always_inline))
