@@ -448,10 +448,19 @@ namespace host_cpu
    * <sanitizer/asan_interface.h>, so that a toolchain without the header still
    * builds the port -- the symbols come from the ASan runtime, which is only
    * linked when -fsanitize=address is on, and the calls are compiled out
-   * otherwise. */
-#if defined(__SANITIZE_ADDRESS__) \
-    || (defined(__has_feature) && __has_feature (address_sanitizer))
+   * otherwise.
+   *
+   * __has_feature is clang's (and GCC >= 14's): it is tested in its own #if,
+   * because an older GCC rejects `__has_feature (x)` even behind a
+   * `defined (__has_feature) &&`. */
+#if defined(__SANITIZE_ADDRESS__)
 #define UOS_HAVE_ASAN 1
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define UOS_HAVE_ASAN 1
+#endif
+#endif
+#if defined(UOS_HAVE_ASAN)
 extern "C" void
 __sanitizer_start_switch_fiber (void** fake_stack_save, const void* bottom,
                                 std::size_t size);
