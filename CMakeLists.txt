@@ -46,6 +46,16 @@ foreach (_dep_var IN ITEMS UOS_SMP_DIR UOS_DEVICES_DIR)
          "µOS++ III sibling working copy" FORCE)
   endif ()
 
+  if (_dep_var STREQUAL "UOS_SMP_DIR" AND NOT EXISTS "${UOS_SMP_DIR}/CMakeLists.txt")
+    if (EXISTS "${_uos_siblings}/micro-os-plus-iii/CMakeLists.txt")
+      set (UOS_SMP_DIR "${_uos_siblings}/micro-os-plus-iii" CACHE PATH
+           "µOS++ III sibling working copy" FORCE)
+    elseif (EXISTS "${_uos_siblings}/micro-os-plus-iii.git/CMakeLists.txt")
+      set (UOS_SMP_DIR "${_uos_siblings}/micro-os-plus-iii.git" CACHE PATH
+           "µOS++ III sibling working copy" FORCE)
+    endif ()
+  endif ()
+
   if (NOT EXISTS "${${_dep_var}}/CMakeLists.txt")
     string (REPLACE "UOS_" "" _repo "${_dep_var}")
     string (REPLACE "_DIR" "" _repo "${_repo}")
