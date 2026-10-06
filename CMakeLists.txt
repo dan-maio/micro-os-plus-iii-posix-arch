@@ -74,4 +74,57 @@ endif()
 add_library(micro-os-plus::iii-posix-arch ALIAS micro-os-plus-iii-posix-arch-interface)
 message(VERBOSE "> micro-os-plus::iii-posix-arch -> micro-os-plus-iii-posix-arch-interface")
 
+
+# Dissolved devices support: hostfile block device, flatfs, and SD stack.
+# The devices repository was dissolved into the architecture ports.
+if (NOT TARGET micro-os-plus::devices-hostfile)
+  add_library (micro-os-plus-iii-devices-hostfile-interface INTERFACE)
+
+  target_include_directories (
+    micro-os-plus-iii-devices-hostfile-interface
+    INTERFACE
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/soc/native/include"
+  )
+
+  target_compile_definitions (
+    micro-os-plus-iii-devices-hostfile-interface INTERFACE SD_BACKEND_HOSTFILE
+  )
+
+  target_sources (
+    micro-os-plus-iii-devices-hostfile-interface
+    INTERFACE
+      "${CMAKE_CURRENT_SOURCE_DIR}/soc/native/src/sd_hostfile.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/src/flatfs.cpp"
+  )
+
+  add_library (micro-os-plus::devices-hostfile ALIAS
+               micro-os-plus-iii-devices-hostfile-interface)
+endif ()
+
+if (NOT TARGET micro-os-plus::devices)
+  add_library (micro-os-plus-iii-devices-interface INTERFACE)
+
+  target_include_directories (
+    micro-os-plus-iii-devices-interface
+    INTERFACE
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/fatfs"
+  )
+
+  target_sources (
+    micro-os-plus-iii-devices-interface
+    INTERFACE
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/src/sd.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/src/flatfs.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/src/usb_dwc2.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/fatfs/ff.c"
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/fatfs/diskio_sd.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/fatfs/fatfs_hw.cpp"
+  )
+
+  add_library (micro-os-plus::devices ALIAS
+               micro-os-plus-iii-devices-interface)
+endif ()
+
 # -----------------------------------------------------------------------------
