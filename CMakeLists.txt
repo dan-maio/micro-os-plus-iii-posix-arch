@@ -49,6 +49,9 @@ target_include_directories(micro-os-plus-iii-posix-arch-interface INTERFACE
 target_sources(micro-os-plus-iii-posix-arch-interface INTERFACE
   src/diag/trace-posix.cpp
   src/rtos/os-core.cpp
+  src/host_cpu.cpp
+  src/free-store.cpp
+  src/exception_handler.cpp
 )
 
 target_compile_definitions(micro-os-plus-iii-posix-arch-interface INTERFACE
