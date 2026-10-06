@@ -129,6 +129,21 @@ namespace os
 
       // ======================================================================
 
+      inline constexpr bool __attribute__ ((always_inline))
+      clock_highres::has_hardware_counter (void) noexcept
+      {
+        return true;
+      }
+
+      inline uint64_t __attribute__ ((always_inline))
+      clock_highres::hardware_counter (void) noexcept
+      {
+        timespec tp;   // NB: no 'struct' — baseline gate has -Werror=redundant-tags
+        ::clock_gettime (CLOCK_MONOTONIC, &tp);
+        return static_cast<uint64_t> (tp.tv_sec) * 1000000ULL
+               + static_cast<uint64_t> (tp.tv_nsec) / 1000ULL;
+      }
+
     } /* namespace port */
   } /* namespace rtos */
 } /* namespace os */
