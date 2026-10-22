@@ -584,6 +584,7 @@ namespace os
       clock_highres::start (void)
       {
         previous_timestamp = get_current_micros ();
+        hr_origin_us = previous_timestamp;
       }
 
       uint32_t

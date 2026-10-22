@@ -248,13 +248,21 @@ namespace os
         return true;
       }
 
+      // CLOCK_MONOTONIC, in microseconds, when hrclock started
+      // (clock_highres::start()): the origin of hrclock, so hrclock.now()
+      // and the clock's tick-driven count (the microseconds measured at each
+      // tick, cycles_per_tick()) agree at every tick. Without it now() is
+      // the host's uptime and hrclock.sleep_until (now () + d) waits that
+      // long plus d.
+      inline volatile uint64_t hr_origin_us = 0;
+
       inline uint64_t __attribute__ ((always_inline))
       clock_highres::hardware_counter (void) noexcept
       {
         timespec tp;
         ::clock_gettime (CLOCK_MONOTONIC, &tp);
         return static_cast<uint64_t> (tp.tv_sec) * 1000000ULL
-               + static_cast<uint64_t> (tp.tv_nsec) / 1000ULL;
+               + static_cast<uint64_t> (tp.tv_nsec) / 1000ULL - hr_origin_us;
       }
 
     } /* namespace port */
