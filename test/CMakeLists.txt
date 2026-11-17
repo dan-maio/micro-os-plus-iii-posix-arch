@@ -117,7 +117,8 @@ foreach (_dir IN LISTS _test_dirs)
     set_source_files_properties (${_srcs} PROPERTIES COMPILE_OPTIONS "${_app_options}")
   endif ()
 
-  set (_libs micro-os-plus::posix-arch)
+  # The board (its facts and code) comes from the consumer, after the port.
+  set (_libs micro-os-plus::posix-arch micro-os-plus::board)
   set (_no_kernel "")
   if ("${_app}" IN_LIST BOARD_TEST_NO_KERNEL)
     if (NOT UOS_PORT_BARE_LIB)

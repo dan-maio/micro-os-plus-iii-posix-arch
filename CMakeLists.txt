@@ -89,65 +89,11 @@ endif ()
 # -----------------------------------------------------------------------------
 # Boards.
 #
-# Boards are DISCOVERED, not listed, exactly as in the other three projects:
-# every directory under test/boards/ holding a board.cmake is a board, and
-# that file is the only place its facts are written. Nothing here knows any
-# board's name.
-#
-# A host "board" is a smaller thing than a silicon one -- it declares a CPU
-# count, a console and its capabilities -- but it is the same contract, and it
-# is checked by the same loop.
+# The port is architecture only; it reads no board. A board's facts (CPU
+# count, console, capabilities, defines) and its code are added by the
+# consumer: the test platforms of micro-os-plus-iii (tests/platforms/<P>/) put
+# them in a `micro-os-plus::board` target, as the upstream platforms do.
 # -----------------------------------------------------------------------------
-file (GLOB _board_decls CONFIGURE_DEPENDS
-      "${CMAKE_CURRENT_SOURCE_DIR}/test/boards/*/board.cmake")
-set (_board_ids "")
-foreach (_decl IN LISTS _board_decls)
-  get_filename_component (_dir "${_decl}" DIRECTORY)
-  get_filename_component (_id "${_dir}" NAME)
-  list (APPEND _board_ids "${_id}")
-endforeach ()
-list (SORT _board_ids)
-
-set (BOARD "native" CACHE STRING "Target board (one of: ${_board_ids})")
-set_property (CACHE BOARD PROPERTY STRINGS ${_board_ids})
-
-if (NOT BOARD IN_LIST _board_ids)
-  message (FATAL_ERROR
-    "BOARD=${BOARD} is not a board of this port.\n"
-    "Available: ${_board_ids}\n"
-    "A board is a directory under test/boards/ containing a board.cmake.")
-endif ()
-
-include ("${CMAKE_CURRENT_SOURCE_DIR}/test/boards/${BOARD}/board.cmake")
-
-# UOS_BOARD_LINKER_HW is NOT required here, and its absence is the point: a
-# host executable is linked by the host toolchain with the host's own script.
-foreach (_required IN ITEMS UOS_BOARD_SRC_DIR UOS_BOARD_NCPU UOS_BOARD_CAPS
-                            UOS_BOARD_DEFINES)
-  if (NOT DEFINED ${_required})
-    message (FATAL_ERROR "test/boards/${BOARD}/board.cmake does not set ${_required}.")
-  endif ()
-endforeach ()
-
-get_filename_component (UOS_BOARD_SRC_DIR "${UOS_BOARD_SRC_DIR}" ABSOLUTE)
-if (NOT IS_DIRECTORY "${UOS_BOARD_SRC_DIR}")
-  message (FATAL_ERROR
-    "test/boards/${BOARD}/board.cmake points at ${UOS_BOARD_SRC_DIR}, which does not exist.")
-endif ()
-
-foreach (_cap_lib IN ITEMS sdcard usb-device)
-  if ("${_cap_lib}" IN_LIST UOS_BOARD_CAPS AND NOT DEFINED UOS_BOARD_DEVICES)
-    message (FATAL_ERROR
-             "test/boards/${BOARD}/board.cmake declares the `${_cap_lib}` capability "
-             "but no UOS_BOARD_DEVICES to provide it.")
-  endif ()
-endforeach ()
-
-foreach (_v IN ITEMS UOS_BOARD_SRC_DIR UOS_BOARD_NCPU UOS_BOARD_CAPS)
-  set (${_v} "${${_v}}" CACHE INTERNAL "board fact")
-endforeach ()
-
-file (GLOB _board_sources CONFIGURE_DEPENDS "${UOS_BOARD_SRC_DIR}/src/*.cpp")
 
 # -----------------------------------------------------------------------------
 # Sanitizers.
@@ -156,9 +102,11 @@ file (GLOB _board_sources CONFIGURE_DEPENDS "${UOS_BOARD_SRC_DIR}/src/*.cpp")
 # reason this option exists at all: the same kernel sources, run under a
 # checker that no Cortex-A53 can offer.
 #
-#     cmake -S . -B build -DBOARD=native -DUOS_SANITIZE=address
-#     cmake -S . -B build -DBOARD=native -DUOS_SANITIZE=undefined
-#     cmake -S . -B build -DBOARD=native -DUOS_SANITIZE=address,undefined
+#     -DUOS_SANITIZE=address
+#     -DUOS_SANITIZE=undefined
+#     -DUOS_SANITIZE=address,undefined
+#
+# given to cmake when configuring a native test build folder.
 #
 # What each one is worth here is measured in docs/posix-arch-port.md §21.  The
 # short version, from running the whole native suite under each:
@@ -208,7 +156,7 @@ add_library (micro-os-plus-iii-posix-arch-interface INTERFACE)
 
 target_include_directories (
   micro-os-plus-iii-posix-arch-interface
-  INTERFACE "include" "${UOS_BOARD_SRC_DIR}/include"
+  INTERFACE "include"
 )
 
 target_sources (
@@ -229,8 +177,6 @@ target_sources (
         # No code. Fails the build the moment a board has not stated
         # something the shared sources need.
         src/board-contract.cpp
-        # Per-board: the console, the LED, the secondary-CPU release.
-        ${_board_sources}
 )
 
 target_compile_definitions (
@@ -241,12 +187,11 @@ target_compile_definitions (
         # it, which is a miscompile rather than an error.
         _XOPEN_SOURCE=700
         _GNU_SOURCE
-        ${UOS_BOARD_DEFINES}
 )
 
 target_compile_options (
   micro-os-plus-iii-posix-arch-interface
-  INTERFACE ${UOS_BOARD_FLAGS} ${_uos_sanitize_opts}
+  INTERFACE ${_uos_sanitize_opts}
 )
 
 target_link_options (
@@ -263,7 +208,6 @@ target_link_libraries (
         # bare stack pointer. See include/cmsis-plus/rtos/port/os-decls.h.
         pthread
         rt
-        ${UOS_BOARD_LIBS}
 )
 
 add_library (micro-os-plus::posix-arch ALIAS micro-os-plus-iii-posix-arch-interface)
