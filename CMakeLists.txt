@@ -212,9 +212,4 @@ target_link_libraries (
 
 add_library (micro-os-plus::posix-arch ALIAS micro-os-plus-iii-posix-arch-interface)
 
-# -----------------------------------------------------------------------------
-if (PROJECT_IS_TOP_LEVEL AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
-  add_subdirectory (test)
-endif ()
-
 message (STATUS "µOS++ III POSIX port: micro-os-plus::posix-arch")
