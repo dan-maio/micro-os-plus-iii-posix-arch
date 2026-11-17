@@ -1,6 +1,6 @@
 {
   "name": "@micro-os-plus/micro-os-plus-iii-posix-arch",
-  "version": "1.0.1",
+  "version": "2.0.0-pre.1",
   "description": "A source code library with the µOS++ POSIX synthetic port",
   "main": "",
   "scripts": {
