@@ -28,43 +28,10 @@ project (micro-os-plus-iii-posix-arch LANGUAGES C CXX)
 set (UOS_POSIX_ARCH_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "")
 
 # -----------------------------------------------------------------------------
-# Dependencies: sibling clones by default. Override with -D to build
-# against a working copy somewhere else.
-get_filename_component (_uos_siblings "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
-
-set (UOS_SMP_DIR "${_uos_siblings}/micro-os-plus-iii"
-     CACHE PATH "µOS++ III SMP kernel working copy")
-
-if (NOT TARGET micro-os-plus::iii)
-  # A workspace may keep the siblings as `*.git` working copies (the xPack
-  # development convention); fall back to that name before giving up.
-  if (NOT EXISTS "${UOS_SMP_DIR}/CMakeLists.txt"
-      AND EXISTS "${UOS_SMP_DIR}.git/CMakeLists.txt")
-    set (UOS_SMP_DIR "${UOS_SMP_DIR}.git" CACHE PATH
-         "µOS++ III sibling working copy" FORCE)
-  endif ()
-
-  if (NOT EXISTS "${UOS_SMP_DIR}/CMakeLists.txt")
-    if (EXISTS "${_uos_siblings}/micro-os-plus-iii-smp/CMakeLists.txt")
-      set (UOS_SMP_DIR "${_uos_siblings}/micro-os-plus-iii-smp" CACHE PATH
-           "µOS++ III sibling working copy" FORCE)
-    elseif (EXISTS "${_uos_siblings}/micro-os-plus-iii-smp.git/CMakeLists.txt")
-      set (UOS_SMP_DIR "${_uos_siblings}/micro-os-plus-iii-smp.git" CACHE PATH
-           "µOS++ III sibling working copy" FORCE)
-    endif ()
-  endif ()
-
-  if (NOT EXISTS "${UOS_SMP_DIR}/CMakeLists.txt")
-    message (FATAL_ERROR
-      "Cannot find the SMP kernel repository at ${UOS_SMP_DIR}.\n"
-      "This project keeps no copy of it. Clone it beside this one:\n"
-      "    git clone <remote>/micro-os-plus-iii.git\n"
-      "or point at an existing working copy:\n"
-      "    cmake -DUOS_SMP_DIR=/path/to/it ...")
-  endif ()
-
-  add_subdirectory ("${UOS_SMP_DIR}" micro-os-plus-iii-smp)
-endif ()
+# The kernel (micro-os-plus::iii and its parts) is not added here. Like every
+# µOS++ port, this is a leaf library: the consumer (the tests, an application)
+# adds the kernel. The targets below link kernel targets by name, which CMake
+# resolves when it generates, so the kernel may be added after the port.
 
 # -----------------------------------------------------------------------------
 # Dissolved devices support: hostfile block device, flatfs, and SD stack.
