@@ -29,7 +29,7 @@
  *    converge, not for a suite.
  *  - The RESULT line and hw_result::ok()/fail() at the end, which is the
  *    verdict convention every test in this workspace follows and the only
- *    thing test_smpl/run-host.sh reads.
+ *    thing the CTest case reads (PASS/FAIL/SKIP_REGULAR_EXPRESSION).
  *
  * WHY THIS TEST IS HERE. It is the port's OS_NCPU=1 leg. The nine SMP object
  * tests cannot be built single-core by construction -- without

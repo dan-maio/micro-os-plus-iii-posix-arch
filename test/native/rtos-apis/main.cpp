@@ -116,7 +116,7 @@ os_main (int argc __attribute__ ((unused)),
   printf ("done\n");
 
   /* The verdict, in the convention every test in this workspace follows and
-     the only thing test_smpl/run-host.sh reads. hw_result flushes stdio
+     the only thing the CTest case reads. hw_result flushes stdio
      before _exit(), which matters here: this test prints with printf(). */
   printf ("\nRESULT: %s\n", (ret == 0) ? "PASS" : "FAIL");
   if (ret == 0)
