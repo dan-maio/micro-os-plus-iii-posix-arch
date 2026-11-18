@@ -61,6 +61,33 @@ if (NOT TARGET micro-os-plus::devices-hostfile)
                micro-os-plus-iii-devices-hostfile-interface)
 endif ()
 
+# The host-file SD card alone, without flatfs: the card driver (sd::SdCard over
+# the file UOS_SD_IMAGE) for a consumer that puts its own file system on top
+# (the posix-io block device of micro-os-plus-iii-devices-storage, then
+# @xpacks/chan-fatfs).
+if (NOT TARGET micro-os-plus::devices-hostfile-sd)
+  add_library (micro-os-plus-iii-devices-hostfile-sd-interface INTERFACE)
+
+  target_include_directories (
+    micro-os-plus-iii-devices-hostfile-sd-interface
+    INTERFACE
+      "${CMAKE_CURRENT_SOURCE_DIR}/drivers/include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/soc/native/include"
+  )
+
+  target_compile_definitions (
+    micro-os-plus-iii-devices-hostfile-sd-interface INTERFACE SD_BACKEND_HOSTFILE
+  )
+
+  target_sources (
+    micro-os-plus-iii-devices-hostfile-sd-interface
+    INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/soc/native/src/sd_hostfile.cpp"
+  )
+
+  add_library (micro-os-plus::devices-hostfile-sd ALIAS
+               micro-os-plus-iii-devices-hostfile-sd-interface)
+endif ()
+
 if (NOT TARGET micro-os-plus::devices)
   add_library (micro-os-plus-iii-devices-interface INTERFACE)
 
