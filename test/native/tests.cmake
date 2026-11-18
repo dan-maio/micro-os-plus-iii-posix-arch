@@ -15,8 +15,9 @@ set (BOARD_TEST_NEED_DEVICES flatfs-test)
 
 # The single-core leg.
 #
-# mutex-stress is upstream's own test (tests/sources/mutex-stress), carried
-# here because the nine SMP object tests cannot be built at OS_NCPU=1 by
+# mutex-stress and rtos-apis are upstream's own suites (tests/sources/<suite>,
+# the platform's UOS_TESTS_SUITES), built here at OS_NCPU=1 because the nine
+# SMP object tests cannot be built at OS_NCPU=1 by
 # construction: without OS_USE_SMP_SCHEDULER the kernel's `current_thread_` is
 # a scalar and `thread::cpu_affinity()` does not exist, and they use both. The
 # port itself is dual-branch -- like cortexm, which runs its three STM32 boards
@@ -40,16 +41,19 @@ endfunction ()
 # SMP scheduler.
 set (BOARD_TEST_SELF_CONTAINED mutex-stress rtos-apis)
 
-# Captured HERE, not inside the function: CMAKE_CURRENT_LIST_DIR is evaluated
-# where a function RUNS, which is test/CMakeLists.txt, not where it is written.
-set (_native_tests_dir "${CMAKE_CURRENT_LIST_DIR}")
-
 # rtos-apis carries a C source, and the loop globs only *.cpp.
 # rtos-apis wants its own os-app-config.h -- the statistics and
 # instrumentation switches its sub-tests read are in it.
 function (board_test_defines _app _out)
-  if (_app STREQUAL "rtos-apis" OR _app STREQUAL "smp-rtos-apis")
+  if (_app STREQUAL "smp-rtos-apis")
+    # (The suites get theirs from the builder.)
     set (${_out} OS_USE_OS_APP_CONFIG_H PARENT_SCOPE)
+  elseif (_app STREQUAL "rtos-apis")
+    # Upstream's suite runs its Chan FatFs cases on RAM disks up to ~34 MB
+    # (FAT32: 66130 blocks) on a host; on upstream's native platform `new` is
+    # the host's malloc, here the board's free store (boards/native/src/
+    # heap.cpp, 32 MiB by default), so this image gets a bigger one.
+    set (${_out} UOS_BOARD_HEAP_BYTES=100663296 PARENT_SCOPE) # 96 MiB
   elseif (_app STREQUAL "smp-mat-test")
     # The host has the memory for a bigger system than the boards' default.
     set (${_out} SMP_MAT_N=500 SMP_MAT_B=50 PARENT_SCOPE)
@@ -62,33 +66,53 @@ endfunction ()
 # defines __posix_open/__posix_read/… -- prefixed, so on a host they do not
 # collide with glibc's own open/read/write, which the board's console, the
 # trace backend and the host-file SD back-end all call.
+# The libucontext package's own C sources do not compile with the port's
+# _GNU_SOURCE (glibc's REG_* enumeration collides with libucontext's REG_*
+# macros); upstream's port does not set it. They are compiled into the
+# applications here, in this directory, so their properties are set here.
+if (TARGET xpack-3rd-party-libucontext-interface)
+  get_target_property (_ucontext_sources xpack-3rd-party-libucontext-interface
+                       INTERFACE_SOURCES)
+  if (_ucontext_sources)
+    set_source_files_properties (${_ucontext_sources} PROPERTIES
+                                 COMPILE_OPTIONS "-U_GNU_SOURCE")
+  endif ()
+endif ()
+
 function (board_test_libraries _app _out)
-  if (_app STREQUAL "rtos-apis" OR _app STREQUAL "smp-rtos-apis")
-    set (${_out} micro-os-plus::iii-posix-io PARENT_SCOPE)
+  # Upstream's suites' configuration (OS_INCLUDE_LIBUCONTEXT) selects the
+  # libucontext package, which upstream's native platform links too.
+  if (_app STREQUAL "smp-rtos-apis")
+    set (${_out} micro-os-plus::iii-posix-io xpack-3rd-party::libucontext
+         PARENT_SCOPE)
+  elseif (_app STREQUAL "mutex-stress" OR _app STREQUAL "rtos-apis")
+    set (${_out} xpack-3rd-party::libucontext PARENT_SCOPE)
   else ()
     set (${_out} "" PARENT_SCOPE)
   endif ()
 endfunction ()
 
 function (board_test_sources _app _out)
-  if (_app STREQUAL "rtos-apis")
-    set (${_out} "${_native_tests_dir}/rtos-apis/test-c-api.c" PARENT_SCOPE)
-  elseif (_app STREQUAL "smp-rtos-apis")
-    # The SMP leg carries only its main.cpp; the API tests are rtos-apis'
-    # own, every source but that directory's main.cpp.
-    file (GLOB _api CONFIGURE_DEPENDS "${_native_tests_dir}/rtos-apis/*.cpp")
-    list (FILTER _api EXCLUDE REGEX "/main\\.cpp$")
-    set (${_out} ${_api} "${_native_tests_dir}/rtos-apis/test-c-api.c"
+  if (_app STREQUAL "smp-rtos-apis")
+    # The SMP leg carries only its main.cpp; the API tests are upstream's
+    # rtos-apis (tests/sources/rtos-apis/src), every source but its main.cpp
+    # and the Chan FatFs one, which this leg does not run.
+    file (GLOB _api CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/sources/rtos-apis/src/*.cpp")
+    list (FILTER _api EXCLUDE REGEX "/(main|test-chan-fatfs)\\.cpp$")
+    set (${_out} ${_api} "${CMAKE_SOURCE_DIR}/sources/rtos-apis/src/test-c-api.c"
          PARENT_SCOPE)
   else ()
     set (${_out} "" PARENT_SCOPE)
   endif ()
 endfunction ()
 
-# ... and it finds rtos-apis' headers and os-app-config.h where they are.
+# ... and it finds rtos-apis' headers and os-app-config.h where they are,
+# upstream's.
 function (board_test_includes _app _out)
   if (_app STREQUAL "smp-rtos-apis")
-    set (${_out} "${_native_tests_dir}/rtos-apis" PARENT_SCOPE)
+    # (That os-app-config.h includes the platform's cmsis-plus/platform.h.)
+    set (${_out} "${CMAKE_SOURCE_DIR}/sources/rtos-apis/include"
+         "${CMAKE_SOURCE_DIR}/platforms/${PLATFORM_NAME}/include" PARENT_SCOPE)
   else ()
     set (${_out} "" PARENT_SCOPE)
   endif ()
