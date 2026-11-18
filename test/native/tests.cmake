@@ -6,13 +6,6 @@
 # itself.
 # -----------------------------------------------------------------------------
 
-# Tests that reach a block device, and so link UOS_BOARD_DEVICES. On this
-# board that is flatfs over the host file backend: both of these take their
-# `!HW_BUILD` branch, which formats a flatfs volume on sd::SdCard rather than
-# mounting a FAT32 partition. They are the reason the board declares the
-# `sdcard` capability at all.
-set (BOARD_TEST_NEED_DEVICES flatfs-test)
-
 # The single-core leg.
 #
 # mutex-stress and rtos-apis are upstream's own suites (tests/sources/<suite>,

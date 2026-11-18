@@ -39,8 +39,8 @@
 //   SD_BACKEND_DWMMC     Synopsys DW-MMC @ 0xFF480000 (RK3506)  -- soc/rk3506/
 //   SD_BACKEND_HOSTFILE  an image file on the host    (POSIX)   -- soc/native/
 //
-// All three define `sd::SdCard` with the same eight methods; flatfs, FatFs'
-// diskio and the tests name only that.
+// All three define `sd::SdCard` with the same eight methods; the posix-io
+// block device and the tests name only that.
 //
 // The third one has no silicon behind it and is not a simulation of the other
 // two: it is a block device that happens to be a file, which is all any of

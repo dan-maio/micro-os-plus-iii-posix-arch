@@ -10,7 +10,7 @@
  * wrong -- but the CONTRACT is the whole point and is honoured exactly:
  * 512-byte sectors, a sector count read once at init(), range-checked
  * transfers, and the same eight methods with the same names and the same
- * failure vocabulary. flatfs, FatFs' diskio and the tests name only those,
+ * failure vocabulary. The posix-io block device and the tests name only those,
  * so smp-num-test and smp-pipeline-test compile and run here with no edit at
  * all -- which is what makes them worth carrying.
  *
