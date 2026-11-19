@@ -48,8 +48,9 @@
 extern "C" volatile uint32_t g_core_stage[OS_NCPU];
 
 // Port-side weak default so a build that does not link the SMP test board still
-// resolves g_core_stage[]. The SMP test board (boards/native/src/smp.cpp)
-// provides a strong definition that overrides this one when present.
+// resolves g_core_stage[]. The SMP test board (the kernel tests'
+// platforms/native/src/smp.cpp) provides a strong definition that overrides
+// this one when present.
 extern "C"
 {
   __attribute__ ((weak)) volatile uint32_t g_core_stage[OS_NCPU] = {};
