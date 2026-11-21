@@ -187,4 +187,8 @@ target_link_libraries (
 
 add_library (micro-os-plus::posix-arch ALIAS micro-os-plus-iii-posix-arch-interface)
 
+# Upstream's name for the same target; kept so the upstream platform files
+# that still use it keep configuring.
+add_library (micro-os-plus::iii-posix-arch ALIAS micro-os-plus-iii-posix-arch-interface)
+
 message (STATUS "µOS++ III POSIX port: micro-os-plus::posix-arch")
